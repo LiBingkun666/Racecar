@@ -1,0 +1,99 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="use_rviz" default="true" />
+    <include file="$(find racecar)/launch/Run_car.launch" />
+    <include file="$(find racecar)/launch/includes/car_tf.launch.xml" />
+    <arg name="init_x" default="0.0" />
+    <arg name="init_y" default="0.0" />
+    <arg name="init_a" default="0.0" />
+    <node pkg="tf2_ros" type="static_transform_publisher" name="map_to_odom" args="0.0 0.0 0.0 0 0 0.0 /map /odom " />
+    <!-- <node name="map_server" pkg="map_server" type="map_server" args="$(find racecar)/map/2d-1.yaml" /> -->
+    <node name="map_server" pkg="map_server" type="map_server" args="$(find racecar)/map/301.yaml" />
+    <!-- <node name="map_server" pkg="map_server" type="map_server" args="$(find racecar)/map/311map.yaml" /> -->
+
+    <include file="$(find racecar)/launch/includes/rf2o.launch.xml" />
+    <!-- wheel odometry -->
+    <include file="$(find encoder_driver)/launch/wheel_odom.launch" />
+    <!-- Robot_Localization -->
+    <node pkg="robot_localization" type="ekf_localization_node" name="ekf_se" clear_params="true">
+        <rosparam command="load" file="$(find racecar)/param/ekf_params.yaml" />
+    </node>
+    <!-- <node pkg="robot_pose_ekf" type="robot_pose_ekf" name="robot_pose_ekf">
+        <param name="output_frame" value="odom"/>  
+        <param name="base_footprint_frame" value="base_footprint"/>   # 这里改成自己的基坐标系
+        <param name="freq" value="30.0"/>
+        <param name="sensor_timeout" value="1.0"/>
+        <param name="odom_used" value="true"/>
+        <param name="imu_used" value="true"/>
+        <param name="vo_used" value="false"/>
+        <remap from="/odom" to="/encoder_imu_odom" />  # 改成已经发布imu数据的话题名称，odom如果不是实际的也需要修改为实际odom数据话题名称
+        <remap from="/imu_data" to="/imu_data" />  # 改成已经发布imu数据的话题名称，odom如果不是实际的也需要修改为实际odom数据话题名称
+    </node> -->
+
+    <!-- Localization -->
+    <!-- AMCL -->
+    <include file="$(find racecar)/launch/includes/amcl.launch.xml">
+        <arg name="init_x" value="$(arg init_x)" /> 
+        <arg name="init_y" value="$(arg init_y)" />
+        <arg name="init_a" value="$(arg init_a)" />
+    </include>
+
+    <!-- Navstack -->
+    <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+        <param name="base_global_planner" value="navfn/NavfnROS" />
+        <param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS" />
+        <rosparam file="$(find racecar)/param/teb_local_planner_params.yaml" command="load" />
+        <rosparam file="$(find racecar)/param/local_costmap_params.yaml" command="load" />
+        <rosparam file="$(find racecar)/param/global_costmap_params.yaml" command="load" />
+        <!-- <rosparam file="$(find racecar)/param/base_global_planner_params.yaml" command="load" />这行注释 -->
+        <rosparam file="$(find racecar)/param/move_base_params.yaml" command="load" />
+    </node>
+    <!-- <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+        <rosparam file="$(find racecar)/param/teb/move_base_params.yaml" command="load"/> 
+        <rosparam file="$(find racecar)/param/teb/global_costmap_common_params.yaml" command="load" ns="global_costmap" />
+        <rosparam file="$(find racecar)/param/teb/local_costmap_common_params.yaml" command="load" ns="local_costmap" />
+        <rosparam file="$(find racecar)/param/teb/local_costmap_params.yaml" command="load" />
+        <rosparam file="$(find racecar)/param/teb/global_costmap_params.yaml" command="load" />
+        <rosparam file="$(find racecar)/param/teb/global_planner_params.yaml" command="load" />
+        <rosparam file="$(find racecar)/param/teb/teb_local_planner_params.yaml" command="load" />        
+        <param name="base_global_planner" value="global_planner/GlobalPlanner" />
+        <param name="planner_frequency" value="20" />            
+        <param name="planner_patience" value="5" />                  
+        <param name="use_dijkstra" value="true" /> 
+        <param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS" />
+        <param name="controller_frequency" value="20" />             
+        <param name="controller_patience" value="5" /> 
+    </node> -->
+    <node pkg="racecar" type="ack_pro_pid_demo" name="ack_pro_pid_demo" output="screen" >
+        <param name="kp" value="40.0" />
+        <param name="ki" value="20.0" />
+        <param name="kd" value="0" />
+        <!-- 终点半径，到达半径之内车就开始刹车 -->
+        <param name="goalRadius" value="1.0" />
+        <!-- 多点导航用 距离这个目标点多少米开始发布下一个目标 -->
+        <param name="goal_ditance" value="1.2" />
+        <!-- 距离发布下一个目标点的距离 -->
+        <param name="goal_ditance_d" value="1.0" />
+        <!-- 接近发布下一个目标点的最大速度 -->
+        <param name="Terminal_v" value="1700" />
+        <!-- 相对于规划速度的多少倍 -->
+        <param name="cmd_vel_num" value="1.1" />
+        <param name="ang_num" value="1.2" />
+        <!-- 规划速度和实际速度的差值，如果 < -2 则刹车 -->
+        <param name="brake" value="-1.5" />
+        <!-- 最大速度 -->
+        <param name="vel_max" value="1700" />
+        <!-- 最小速度 -->
+        <param name="vel_min" value="1500" />
+        <!-- 角度中值，调车直线角度 -->
+        <param name="z_zhong" value="89" />
+        <!-- 车前轴中心到后轴中心的距离 轴距 -->
+        <param name="wheelbase2" value="0.8" />
+        <!-- 如果规划出后退的路线，强制向前走 -->
+        <param name="cmd_vel_min" value="0.3" />
+        <param name="file" value="1.0" />
+    </node>
+    <!-- 开启循环发布目标点 -->
+    <node pkg="racecar" type="go_pro.py" name="goal_loop"  output="screen"/>
+    <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find racecar)/rviz/dache.rviz" if="$(arg use_rviz)"/> -->
+</launch>
