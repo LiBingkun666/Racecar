@@ -1,3 +1,5 @@
+基于ROS的无人车竞速识别系统功能包：包含车道线保持、增量式PID算法控制、imu和编码器融合定位等功能包。
+
 1，labelme标注，得到标注后的json
 2、转化的时候需要修改： D:\Anaconda3\Lib\site-packages\labelme\cli\json_to_dataset.py 中的类别个数：如：
         label_name_to_value = {"_background_": 0,
